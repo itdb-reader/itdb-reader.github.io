@@ -1,47 +1,85 @@
 <template>
-  <q-page class="row items-center justify-evenly">
-    <example-component
-      title="Example component"
-      active
-      :todos="todos"
-      :meta="meta"
-    ></example-component>
+  <q-page class="upload" @dragover.prevent @drop.prevent="handleDrop">
+    <div class="top-space"></div>
+    <q-card class="drop-zone" @drop="handleDrop" @dragover.prevent @click="triggerFileInput">
+      <q-card-section>
+        <p >Drag and drop your ITDB file here, or click to select a file.</p>
+        
+        <q-file 
+          v-model="fileInput" 
+          v-on:update:model-value="processFile"
+          style="display: none;" 
+          accept=".itdb" 
+        />
+      </q-card-section>
+    </q-card>
   </q-page>
 </template>
 
-<script setup lang="ts">
+
+<script lang="ts" setup>
+
 import { ref } from 'vue';
-import { Todo, Meta } from 'components/models';
-import ExampleComponent from 'components/ExampleComponent.vue';
+import { useRouter } from 'vue-router';
 
-defineOptions({
-  name: 'IndexPage'
-});
+const router = useRouter();
+const fileInput = ref<File | null>(null);
 
-const todos = ref<Todo[]>([
-  {
-    id: 1,
-    content: 'ct1'
-  },
-  {
-    id: 2,
-    content: 'ct2'
-  },
-  {
-    id: 3,
-    content: 'ct3'
-  },
-  {
-    id: 4,
-    content: 'ct4'
-  },
-  {
-    id: 5,
-    content: 'ct5'
+const handleDrop = (event: DragEvent) => {
+  const files = event.dataTransfer?.files;
+
+  if (files && files.length > 0) {
+    processFile(files[0]);
   }
-]);
+};
 
-const meta = ref<Meta>({
-  totalCount: 1200
-});
+const processFile = (file: File) => {
+  if (file.type === 'application/octet-stream' || file.name.endsWith('.itdb')) {
+    localStorage.setItem('currentFileName', file.name);
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const fileContent = reader.result as string;
+      localStorage.setItem('cachedFile', fileContent);
+      localStorage.setItem('fileTimestamp', Date.now().toString());
+    };
+    reader.readAsText(file);
+    
+    router.push('/viewer');
+  } else {
+    alert('Please upload a valid .itdb file.');
+  }
+};
+
+const triggerFileInput = () => {
+  const input = document.querySelector('input[type=file]') as HTMLInputElement;
+
+  if (input) {
+    input.click();
+  }
+};
 </script>
+
+<style scoped>
+.upload {
+  max-width: 600px;
+  margin: auto;
+}
+
+.top-space {
+  height: 20px; /* Adjust the height as needed for spacing */
+}
+
+.drop-zone {
+  border: 2px dashed #007bff;
+  border-radius: 5px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.drop-zone:hover {
+  background-color: #f0f8ff;
+}
+</style>
